@@ -1,0 +1,15 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="OETS.Journal.Server.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="maxConnections" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">10</Value>
+    </Setting>
+    <Setting Name="ServerIP" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">172.26.2.168</Value>
+    </Setting>
+    <Setting Name="ServerPORT" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">65534</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
