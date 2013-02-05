@@ -29,6 +29,28 @@ namespace OETS.Journal.Client
         private Client client = Client.Instance;
         private string strHostName, iPAddress;
 
+        #region Instance
+        private static MainWindow m_instance;
+        public static MainWindow Instance
+        {
+            get
+            {
+                if (m_instance == null)
+                {
+                    Mutex mutex = new Mutex();
+                    mutex.WaitOne();
+
+                    if (m_instance == null)
+                        m_instance = new MainWindow();
+
+                    mutex.Close();
+                }
+
+                return m_instance;
+            }
+        }
+        #endregion
+
         public MainWindow()
         {
             InitializeComponent();
@@ -44,6 +66,11 @@ namespace OETS.Journal.Client
 
         void ShowError(string cat = null, string msg = null)
         {
+            if (cat == "REPLY")
+            {
+                System.Windows.MessageBox.Show(msg, cat);
+                return;
+            }
             if (System.Windows.MessageBox.Show(msg + "\nОбратитесь к системному администратору для устранения ошибки.\nПрограмма будет автоматически закрыта!", "Ошибка " + cat, MessageBoxButton.OK, MessageBoxImage.Error) == MessageBoxResult.OK)
             {
                 this.Dispatcher.Invoke(DispatcherPriority.Normal, (Action)(() =>
@@ -82,9 +109,14 @@ namespace OETS.Journal.Client
         {
             this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
             {
+                if (client.IsConnected)
+                    WelcomeText.Content = String.Format("Я подключён к {0}:{1}", client.ServerIp, client.ServerPort);   
+                else
+                    WelcomeText.Content = "Я не подключён";   
             }));
         }
         #endregion
+
         #region OnConnectFailed
         void OnConnectFailed(object sender, TimedEventArgs ea)
         {
@@ -101,6 +133,7 @@ namespace OETS.Journal.Client
 
             this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
             {
+                WelcomeText.Content = "Я отключён"; 
             }));
 
             Thread.CurrentThread.IsBackground = true;
@@ -149,6 +182,18 @@ namespace OETS.Journal.Client
                 Thread.Sleep(200);
                 ShowError(pck.Data.ERRORCAT, pck.Data.ERRORMSG);
             }
+        }
+
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            ResponsePacket metadata = new ResponsePacket();
+            string metatype = metadata.GetType().FullName;
+
+            metadata.From = "CLIENT";
+            metadata.To = "SSocketServer";
+            metadata.Response = "PING?";
+
+            client.SendCommand(client.ServerIp, OpcoDes.CMSG_TEST, metatype, metadata);
         }
 
 

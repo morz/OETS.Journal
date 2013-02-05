@@ -9,6 +9,7 @@ namespace OETS.Shared.Opcodes
     public enum OpcoDes : int
     {
         CMSG_REQUEST_USER_LOGIN,
+        CMSG_TEST,
         /// <summary>
         /// СЕРВЕР - Сообщение об ошибке
         /// </summary>

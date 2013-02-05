@@ -135,6 +135,7 @@ namespace OETS.Server
             {
                 m_CommandHandler[OpcoDes.CMSG_REQUEST_USER_LOGIN] = HandleCMSG_REQUEST_USER_LOGIN;
                 m_CommandHandler[OpcoDes.CMSG_PONG] = HandleCMSG_PONG;
+                m_CommandHandler[OpcoDes.CMSG_TEST] = HandleCMSG_TEST;
             }
             catch (Exception ex)
             {
@@ -146,6 +147,16 @@ namespace OETS.Server
 		#endregion private constructor
         
         #region CommandHandlers
+        private void HandleCMSG_TEST(ClientManager cm, TimedEventArgs ea)
+        {
+            SSocket chatSocket = cm.SSocket;
+            ResponsePacket pck = (ResponsePacket)chatSocket.Metadata;
+            if (pck.Response == "PING?")
+            {
+                SendError(cm, "PONG!", "REPLY");
+            }
+        }
+
         #region HandleCMSG_REQUEST_USER_LOGIN
         private void HandleCMSG_REQUEST_USER_LOGIN(ClientManager cm, TimedEventArgs ea)
         {

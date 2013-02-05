@@ -43,7 +43,6 @@ namespace OETS.Server
                 Console.Title = Title;
                 Console.SetWindowSize(120, 50);
                 Console.Write(Header);
-                s_log.Info("Загрузка данных из базы данных...");
                 if (GCSettings.IsServerGC)
                 {
                     GCSettings.LatencyMode = GCLatencyMode.Batch;
@@ -71,7 +70,6 @@ namespace OETS.Server
 
         public static bool Start()
         {
-            s_log.Info("Загрузка данных из базы данных ЗАВЕРШЕНА.");
             server = SocketServer.Instance;
             server.Started += server_Started;
             server.LoginSuccess += server_LoginSuccess;
