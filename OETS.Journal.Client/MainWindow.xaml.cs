@@ -24,7 +24,7 @@ namespace OETS.Journal.Client
     /// <summary>
     /// Логика взаимодействия для MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow
     {
         private Client client = Client.Instance;
         private string strHostName, iPAddress;
