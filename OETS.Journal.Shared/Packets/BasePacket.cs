@@ -73,6 +73,7 @@ namespace OETS.Shared
                     }
                     else if (fi.FieldType == typeof(OETS.Shared.Structures.ping_template)
                         || fi.FieldType == typeof(OETS.Shared.Structures.error_template)
+                        || fi.FieldType == typeof(OETS.Shared.Structures.journal_contentData)
                         )
                     {
                         byte[] rawdatas = new byte[size];
@@ -134,6 +135,7 @@ namespace OETS.Shared
                     }
                     if (fi.FieldType == typeof(OETS.Shared.Structures.ping_template)
                         || fi.FieldType == typeof(OETS.Shared.Structures.error_template)
+                        || fi.FieldType == typeof(OETS.Shared.Structures.journal_contentData)
                         )
                     {
                         object strField = fi.GetValue(this);

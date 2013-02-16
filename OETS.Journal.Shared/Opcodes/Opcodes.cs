@@ -9,7 +9,7 @@ namespace OETS.Shared.Opcodes
     public enum OpcoDes : int
     {
         CMSG_REQUEST_USER_LOGIN,
-        CMSG_TEST,
+        CMSG_SEND_JOURNAL_ENTRY,
         /// <summary>
         /// СЕРВЕР - Сообщение об ошибке
         /// </summary>
@@ -22,7 +22,7 @@ namespace OETS.Shared.Opcodes
         /// СЕРВЕР - Ответ на пинг
         /// </summary>
         SMSG_PING,
-
+        SMSG_SERVER_STOPED,
         SMSG_SERVER_DISCONNECTED,
 
         MAX_NUM

@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using OETS.Shared;
 using OETS.Shared.Util;
 using OETS.Shared.Opcodes;
+using System.Windows.Threading;
 
 namespace OETS.Journal.Client
 {

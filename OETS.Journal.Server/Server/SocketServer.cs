@@ -135,7 +135,7 @@ namespace OETS.Server
             {
                 m_CommandHandler[OpcoDes.CMSG_REQUEST_USER_LOGIN] = HandleCMSG_REQUEST_USER_LOGIN;
                 m_CommandHandler[OpcoDes.CMSG_PONG] = HandleCMSG_PONG;
-                m_CommandHandler[OpcoDes.CMSG_TEST] = HandleCMSG_TEST;
+                m_CommandHandler[OpcoDes.CMSG_SEND_JOURNAL_ENTRY] = HandleCMSG_SEND_JOURNAL_ENTRY;
             }
             catch (Exception ex)
             {
@@ -147,13 +147,13 @@ namespace OETS.Server
 		#endregion private constructor
         
         #region CommandHandlers
-        private void HandleCMSG_TEST(ClientManager cm, TimedEventArgs ea)
+        private void HandleCMSG_SEND_JOURNAL_ENTRY(ClientManager cm, TimedEventArgs ea)
         {
             SSocket chatSocket = cm.SSocket;
-            ResponsePacket pck = (ResponsePacket)chatSocket.Metadata;
-            if (pck.Response == "PING?")
+            JournalPacket pck = (JournalPacket)chatSocket.Metadata;
+            if (pck.Response != "")
             {
-                SendError(cm, "PONG!", "REPLY");
+                s_log.Trace(pck.Data.ID);
             }
         }
 
@@ -516,7 +516,7 @@ namespace OETS.Server
                     cm.CommandReceived -= OnClientManagerCommandReceived;
 
                     // send a ServerDisconnected command to each connected client
-                    //SendResponse(cm, OpcoDes.SMSG_SERVER_STOPED, "Server stopped.");
+                    SendResponse(cm, OpcoDes.SMSG_SERVER_STOPED, "Сервер был остановлен.");
 
                     // disconnect the ClientManager object
                     cm.Disconnect();

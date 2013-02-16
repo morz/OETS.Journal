@@ -56,11 +56,13 @@
     <Compile Include="Packets\BasePacket.cs" />
     <Compile Include="Packets\ErrorPacket.cs" />
     <Compile Include="Packets\IBasePacket.cs" />
+    <Compile Include="Packets\JournalPacket.cs" />
     <Compile Include="Packets\PingPacket.cs" />
     <Compile Include="Packets\ResponsePacket.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SSocket.cs" />
     <Compile Include="Structures\error_template.cs" />
+    <Compile Include="Structures\journal_contentData.cs" />
     <Compile Include="Structures\ping_template.cs" />
     <Compile Include="Util\BinarySerialization.cs" />
     <Compile Include="Util\Extensions.cs" />

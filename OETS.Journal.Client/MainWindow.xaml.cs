@@ -3,6 +3,7 @@ using OETS.Shared.Opcodes;
 using OETS.Shared.Structures;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -27,7 +28,7 @@ namespace OETS.Journal.Client
     public partial class MainWindow
     {
         private Client client = Client.Instance;
-        private string strHostName, iPAddress;
+        public string strHostName, iPAddress;
 
         #region Instance
         private static MainWindow m_instance;
@@ -51,20 +52,46 @@ namespace OETS.Journal.Client
         }
         #endregion
 
+        private ObservableCollection<JournalContentData> _journalEntriesData;
+        public ObservableCollection<JournalContentData> JournalEntriesData
+        {
+            get
+            {
+                if (this._journalEntriesData == null)
+                    this._journalEntriesData = new ObservableCollection<JournalContentData>();
+
+                return this._journalEntriesData;
+            }
+            set
+            {
+                this._journalEntriesData = value;
+            }
+        }
+
         public MainWindow()
         {
             InitializeComponent();
+            m_instance = this;
+            DateText.Content = DateTime.Now.ToShortDateString();
+            var jd = new journal_contentData();
+            jd.CodeOborude = "003.993.330";
+            jd.Date = DateTime.Now.ToShortDateString();
+            jd.Description = "Ничего неделал, само работает";
+            jd.Enable = true;
+            jd.Family = "TEST";
+            jd.ID = "OSkjksjhaA";
+            jd.ModifyDate = "";
+            jd.NameOborude = "";
+            jd.Smena = "A";
+            jd.Status = "РНЗ";
 
-            strHostName = Dns.GetHostName();
-            iPAddress = User32.GetLocalIpAddress();
-            if (iPAddress == "NotInLocal")
-                ShowError("Вычисления адреса", "Не возможно вычислисть ваш Адрес.\nЭто произошло по одной из причин:\n\t1) Вы не находитесь в одной подсети с новостным сервером.\n\t2) Произошол сбой.");
-            else
-                ConnectClient();
+            for(int i = 0; i < 10; ++i)
+                JournalEntriesData.Add(new JournalContentData(jd));
 
+            JournalData.DataContext = JournalEntriesData;
         }
 
-        void ShowError(string cat = null, string msg = null)
+        public void ShowError(string cat = null, string msg = null)
         {
             if (cat == "REPLY")
             {
@@ -81,6 +108,10 @@ namespace OETS.Journal.Client
         }
         public void ConnectClient()
         {
+            this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
+            {
+                Choice.Instance.ProgressText.Content = "Подключаюсь к серверу.";
+            }));
             SubscribeClientToEvents();
             client.Connect(strHostName, iPAddress);
         }
@@ -109,10 +140,17 @@ namespace OETS.Journal.Client
         {
             this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
             {
+
                 if (client.IsConnected)
-                    WelcomeText.Content = String.Format("Я подключён к {0}:{1}", client.ServerIp, client.ServerPort);   
+                {
+                    if (Choice.Instance.IsVisible)
+                        Choice.Instance.ProgressText.Content = "Связь с сервером установлена.";
+                }
                 else
-                    WelcomeText.Content = "Я не подключён";   
+                {
+                    if (Choice.Instance.IsVisible)
+                        Choice.Instance.ProgressText.Content = "Не возможно установить связь с сервером.";
+                }
             }));
         }
         #endregion
@@ -120,21 +158,34 @@ namespace OETS.Journal.Client
         #region OnConnectFailed
         void OnConnectFailed(object sender, TimedEventArgs ea)
         {
-            OnDisconnected(sender, ea);
+
+            this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
+            {
+                if (Choice.Instance.IsVisible)
+                    Choice.Instance.ProgressText.Content = "Не возможно установить связь.";
+            }));
+            UnSubscribeClientFromEvents();
+            if (client.IsConnected)
+                client.Disconnect();
+
+            Thread.CurrentThread.IsBackground = true;
+            Thread.Sleep(10000);
+            ConnectClient();
         }
         #endregion
 
         #region OnDisconnected
         void OnDisconnected(object sender, TimedEventArgs ea)
         {
+            this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
+            {
+                if (Choice.Instance.IsVisible)
+                    Choice.Instance.ProgressText.Content = "Соединение разорвано.";
+            }));
+
             UnSubscribeClientFromEvents();
             if (client.IsConnected)
                 client.Disconnect();
-
-            this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
-            {
-                WelcomeText.Content = "Я отключён"; 
-            }));
 
             Thread.CurrentThread.IsBackground = true;
             Thread.Sleep(10000);
@@ -161,9 +212,22 @@ namespace OETS.Journal.Client
                 case OpcoDes.SMSG_ERROR:
                     HandleSMSG_ERROR(ea);
                     break;
+                case OpcoDes.SMSG_SERVER_STOPED:
+                    HandleSMSG_SERVER_STOPED(ea);
+                    break;
             }
         }
         #endregion
+       
+        private void HandleSMSG_SERVER_STOPED(SSEventArgs ea)
+        {
+            var sSocket = ea.SSocket;
+            var pck = (ResponsePacket)sSocket.Metadata;
+            if (pck != null)
+            {
+            }
+                
+        }
 
         private void HandleSMSG_PING(SSEventArgs ea)
         {
@@ -186,14 +250,7 @@ namespace OETS.Journal.Client
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            ResponsePacket metadata = new ResponsePacket();
-            string metatype = metadata.GetType().FullName;
-
-            metadata.From = "CLIENT";
-            metadata.To = "SSocketServer";
-            metadata.Response = "PING?";
-
-            client.SendCommand(client.ServerIp, OpcoDes.CMSG_TEST, metatype, metadata);
+            new JournalAdd().ShowDialog();
         }
 
 
