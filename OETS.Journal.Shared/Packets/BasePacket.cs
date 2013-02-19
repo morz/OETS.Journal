@@ -4,6 +4,7 @@ using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using OETS.Shared.Util;
 
 namespace OETS.Shared
 {
@@ -65,16 +66,12 @@ namespace OETS.Shared
                     // get size of the next member from the byte array
                     size = BitConverter.ToInt32(data, ptr);
                     ptr += 4;
-
                     if (fi.FieldType == typeof(System.String))
                     {
                         fi.SetValue(this, Encoding.Unicode.GetString(data, ptr, size));
                         ptr += size;
                     }
-                    else if (fi.FieldType == typeof(OETS.Shared.Structures.ping_template)
-                        || fi.FieldType == typeof(OETS.Shared.Structures.error_template)
-                        || fi.FieldType == typeof(OETS.Shared.Structures.journal_contentData)
-                        )
+                    else if (fi.FieldType.IsStructureType())
                     {
                         byte[] rawdatas = new byte[size];
                         Buffer.BlockCopy(data, ptr, rawdatas, 0, size);
@@ -133,10 +130,7 @@ namespace OETS.Shared
                         Buffer.BlockCopy(Encoding.Unicode.GetBytes(strField), 0, data, ptr, size);
                         ptr += size;
                     }
-                    if (fi.FieldType == typeof(OETS.Shared.Structures.ping_template)
-                        || fi.FieldType == typeof(OETS.Shared.Structures.error_template)
-                        || fi.FieldType == typeof(OETS.Shared.Structures.journal_contentData)
-                        )
+                    if (fi.FieldType.IsStructureType())
                     {
                         object strField = fi.GetValue(this);
                         int rawsize = Marshal.SizeOf(strField);

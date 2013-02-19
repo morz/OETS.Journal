@@ -37,8 +37,8 @@ namespace OETS.Journal.Client
             jd.Description = descriptionText.Text;
             jd.ModifyDate = DateTime.Now.ToLongDateString();
             jd.Enable = true;
-            jd.Family =familyText.Text;
-            jd.NameOborude = "";
+            jd.Family = familyText.Text;
+            jd.NameOborude = nameText.Text;
             jd.Smena = smenaText.Text;
             jd.Status = statusText.Text;
             jd.ID = scm.Encrypt(String.Format("{0}-{1}-{2}", jd.Date, codeOborude.Text, familyText.Text));

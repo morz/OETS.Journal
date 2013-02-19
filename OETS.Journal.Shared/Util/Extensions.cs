@@ -286,6 +286,11 @@ namespace OETS.Shared.Util
 			       type == typeof (int) || type == typeof (uint) || type == typeof (short) || type == typeof (ushort) ||
 			       type == typeof (byte) || type == typeof (sbyte) || type == typeof (long) || type == typeof (ulong);
 		}
+
+        public static bool IsStructureType(this Type type)
+        {
+            return type.FullName.StartsWith("OETS.Shared.Structures");
+        }
 		#endregion
 	}
 }

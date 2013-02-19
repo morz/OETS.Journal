@@ -3,18 +3,20 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Добавление записи в журнал" Height="384.512" Width="384.669" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
     <Grid>
-        <TextBox HorizontalAlignment="Left" Name="codeOborude" Height="23" Margin="162,10,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="205"/>
-        <TextBox x:Name="smenaText" HorizontalAlignment="Left" Height="23" Margin="162,38,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="205"/>
-        <TextBox x:Name="statusText" HorizontalAlignment="Left" Height="23" Margin="162,89,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="205"/>
-        <TextBox x:Name="familyText" HorizontalAlignment="Left" Height="23" Margin="162,62,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="205"/>
+        <TextBox HorizontalAlignment="Left" Name="codeOborude" Height="23" Margin="162,5,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="205"/>
+        <TextBox x:Name="smenaText" HorizontalAlignment="Left" Height="23" Margin="162,60,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="205"/>
+        <TextBox x:Name="statusText" HorizontalAlignment="Left" Height="23" Margin="162,116,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="205"/>
+        <TextBox x:Name="familyText" HorizontalAlignment="Left" Height="23" Margin="162,89,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="205"/>
         <TextBox x:Name="descriptionText" HorizontalAlignment="Left" Height="156" Margin="10,167,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="357"/>
         <Button Content="Сохранить" HorizontalAlignment="Left" Margin="53,328,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click_1"/>
         <Button Content="Отменить" HorizontalAlignment="Left" Margin="254,328,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click_2"/>
-        <Label Content="Код оборудования" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
-        <Label Content="Смена" HorizontalAlignment="Left" Margin="10,33,0,0" VerticalAlignment="Top"/>
-        <Label Content="Фамилия" HorizontalAlignment="Left" Margin="10,61,0,0" VerticalAlignment="Top"/>
-        <Label Content="Статус наряда" HorizontalAlignment="Left" Margin="10,89,0,0" VerticalAlignment="Top"/>
+        <Label Content="Код оборудования" HorizontalAlignment="Left" Margin="10,5,0,0" VerticalAlignment="Top"/>
+        <Label Content="Смена" HorizontalAlignment="Left" Margin="10,59,0,0" VerticalAlignment="Top"/>
+        <Label Content="Фамилия" HorizontalAlignment="Left" Margin="10,87,0,0" VerticalAlignment="Top"/>
+        <Label Content="Статус наряда" HorizontalAlignment="Left" Margin="10,116,0,0" VerticalAlignment="Top"/>
         <Label Content="Выполненные работы" HorizontalAlignment="Left" Margin="10,139,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="nameText" HorizontalAlignment="Left" Height="23" Margin="162,32,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="205"/>
+        <Label Content="Имя станка" HorizontalAlignment="Left" Margin="10,31,0,0" VerticalAlignment="Top"/>
 
     </Grid>
 </Window>

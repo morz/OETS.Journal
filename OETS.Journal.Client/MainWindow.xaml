@@ -1,6 +1,6 @@
 ﻿<Window x:Class="OETS.Journal.Client.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Просмотр журнала" Height="600" Width="800" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Просмотр журнала" Height="600" Width="800" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" KeyUp="onKeyUp" Loaded="Window_Loaded_1">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="38*"/>
@@ -11,9 +11,9 @@
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="540"/>
             </Grid.RowDefinitions>
-                <Button Content="Назад" HorizontalAlignment="Left" Background="{x:Null}" Margin="0,0,0,5" />
-                <Label Content="DateTime.Now" Name="DateText" HorizontalAlignment="Center" HorizontalContentAlignment="Center" Width="479" FontSize="14" FontWeight="Bold" Margin="42,0,48,5" />
-                <Button Content="Вперёд" HorizontalAlignment="Right" Background="{x:Null}" Margin="0,0,0,5" />
+                <Button Content="Назад" HorizontalAlignment="Left" Background="{x:Null}" Margin="0,0,0,5" Click="Button_Click_3" />
+                <DatePicker x:Name="DateText" SelectedDateFormat="Long" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="187,8,177,8" Width="205" FontSize="14" SelectedDateChanged="DateText_SelectedDateChanged" />
+            <Button Content="Вперёд" HorizontalAlignment="Right" Background="{x:Null}" Margin="0,0,0,5" Click="Button_Click_2" />
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" >
                 <ItemsControl Name="ItemsList" BorderThickness="0" ItemsSource="{Binding Mode=OneWay, NotifyOnSourceUpdated=True}" Margin="0">
                     <ItemsControl.ItemTemplate>

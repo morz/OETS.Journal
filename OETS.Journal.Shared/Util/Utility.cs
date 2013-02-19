@@ -153,37 +153,6 @@ namespace OETS.Shared.Util
 		}
 
 		/// <summary>
-		/// Converts the current time and date into the time and date format of the WoW client.
-		/// </summary>
-		/// <returns>a packed time and date</returns>
-		public static uint GetDateTimeToGameTime(DateTime n)
-		{
-			uint dayOfWeek = ((uint)n.DayOfWeek == 0 ? 6 : ((uint)n.DayOfWeek) - 1);
-
-			uint gameTime = ((uint)n.Minute & 0x3F);
-			gameTime |= (((uint)n.Hour << 6) & 0x7C0);
-			gameTime |= ((dayOfWeek << 11) & 0x3800);
-			gameTime |= (((uint)(n.Day - 1) << 14) & 0xFC000);
-			gameTime |= (((uint)(n.Month - 1) << 20) & 0xF00000);
-			gameTime |= (((uint)(n.Year - 2000) << 24) & 0x1F000000);
-
-			return gameTime;
-		}
-
-		public static DateTime GetGameTimeToDateTime(uint packedDate)
-		{
-			int minute = (int)(packedDate & 0x3F);
-			int hour = (int)((packedDate >> 6) & 0x1F);
-			//DayOfWeek dayOfWeek = (DayOfWeek) ((packedDate >> 11) & 0x3800);
-			int day = (int)((packedDate >> 14) & 0x3F);
-			int month = (int)((packedDate >> 20) & 0xF);
-			int year = (int)((packedDate >> 24) & 0x1F);
-
-			return new DateTime(year + 2000, month + 1, day + 1, hour, minute, 0);
-
-		}
-
-		/// <summary>
 		/// Gets the time between the Unix epich and a specific <see cref="DateTime">time</see>.
 		/// </summary>
 		/// <param name="time">the end time</param>
@@ -856,30 +825,9 @@ namespace OETS.Shared.Util
 			// try resolve synchronously
 			var addresses = Dns.GetHostAddresses(input);
 
-			// for now only do Ipv4 address (apparently the wow client doesnt support Ipv6 yet)
 			addr = addresses.Where(address => address.AddressFamily == AddressFamily.InterNetwork).FirstOrDefault();
 
 			return addr ?? IPAddress.Loopback;
-		}
-
-		public static string FormatMoney(uint money)
-		{
-			var str = "";
-			if (money >= 10000)
-			{
-				str += (money / 10000) + "g ";
-				money = money % 10000;
-			}
-			if (money >= 100)
-			{
-				str += (money / 100) + "s ";
-				money = money % 100;
-			}
-			if (money > 0)
-			{
-				str += money + "c";
-			}
-			return str;
 		}
 
 		public static string Format(this TimeSpan time)
@@ -948,7 +896,7 @@ namespace OETS.Shared.Util
 		/// One second has 10 million system ticks (DateTime.Ticks etc)
 		/// </summary>
 
-		private const string DefaultNameSpace = "WCell.Constants.";
+        private const string DefaultNameSpace = "OETS.Shared.";
 
 		public static Type GetType(string typeName)
 		{
@@ -963,6 +911,10 @@ namespace OETS.Shared.Util
 			}
 			return type;
 		}
+        public static bool IsStructureType(Type type)
+        {
+            return type.FullName.StartsWith(DefaultNameSpace + "Structures");
+        }
 
 		/// <summary>
 		/// Gets all assemblies that match the given fully qualified name without version checks etc.

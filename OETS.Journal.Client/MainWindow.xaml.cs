@@ -72,7 +72,8 @@ namespace OETS.Journal.Client
         {
             InitializeComponent();
             m_instance = this;
-            DateText.Content = DateTime.Now.ToShortDateString();
+            DateText.SelectedDate = DateTime.Now;
+
             var jd = new journal_contentData();
             jd.CodeOborude = "003.993.330";
             jd.Date = DateTime.Now.ToShortDateString();
@@ -85,10 +86,14 @@ namespace OETS.Journal.Client
             jd.Smena = "A";
             jd.Status = "РНЗ";
 
-            for(int i = 0; i < 10; ++i)
+            for (int i = 0; i < 10; ++i)
+            {
+                jd.Date = DateTime.Now.AddDays(-i).ToShortDateString();
+                jd.CodeOborude = i.ToString();
                 JournalEntriesData.Add(new JournalContentData(jd));
+            }
 
-            JournalData.DataContext = JournalEntriesData;
+            
         }
 
         public void ShowError(string cat = null, string msg = null)
@@ -135,7 +140,7 @@ namespace OETS.Journal.Client
         }
 
         #region OnConnected
-        private static bool IsStart = true;
+        //private static bool IsStart = true;
         void OnConnected(object sender, TimedEventArgs ea)
         {
             this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
@@ -252,6 +257,35 @@ namespace OETS.Journal.Client
         {
             new JournalAdd().ShowDialog();
         }
+
+        private void onKeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.F11 && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift | ModifierKeys.Alt)) == (ModifierKeys.Control | ModifierKeys.Shift | ModifierKeys.Alt))
+            {
+                MessageBox.Show("OK");
+            }
+        }
+
+        private void Button_Click_2(object sender, RoutedEventArgs e)
+        {
+            DateText.SelectedDate = DateText.SelectedDate.Value.AddDays(1);
+        }
+
+        private void Button_Click_3(object sender, RoutedEventArgs e)
+        {
+            DateText.SelectedDate = DateText.SelectedDate.Value.AddDays(-1);
+        }
+
+        private void DateText_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        {
+            JournalData.DataContext = JournalEntriesData.Where(x => x.Date == DateText.SelectedDate.Value.ToShortDateString());
+        }
+
+        private void Window_Loaded_1(object sender, RoutedEventArgs e)
+        {
+            JournalData.DataContext = JournalEntriesData.Where(x => x.Date == DateText.SelectedDate.Value.ToShortDateString());
+        }
+
 
 
     }
