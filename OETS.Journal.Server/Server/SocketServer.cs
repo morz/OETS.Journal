@@ -153,7 +153,8 @@ namespace OETS.Server
             JournalPacket pck = (JournalPacket)chatSocket.Metadata;
             if (pck.Response != "")
             {
-                s_log.Warn("Получили сведения журнала с ID:" + pck.Data.ID);
+                JournalManager.Instance.Add(pck.Data.ID, pck.Data);
+                s_log.Info("Получили сведения журнала с ID:" + pck.Data.ID);
             }
         }
 

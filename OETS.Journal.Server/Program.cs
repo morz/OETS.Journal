@@ -28,18 +28,21 @@ namespace OETS.Server
                 AppDomain.CurrentDomain.UnhandledException += 
                     (sender, arg) => LogUtil.FatalException(arg.ExceptionObject as Exception,"Неизвестная ошибко!");
 
+                string rev = "Версия: 011";
+
                 string Header = "/**\n" +
-                                 "* Продукт: Сервер журнала передачи смены.\n"+
-                                 "* Версия: 001 $\n" +
-                                 "* Автор: Егоров Данил;\n"+
+                                 "* Продукт: Сервер журнала передачи смены.\n" +
+                                 "* " + rev + "\n" +
+                                 "* Автор: Егоров Данил;\n" +
                                  "* таб.№: 03776024\n" +
                                  "* */\n";
-                string rev = "Версия: 001";
+                
                 rev = rev.Replace('$', ' ');
 
                 if (asm != null)
                     Title = asm.GetName().Name + ". " +rev;
 
+                
                 Console.Title = Title;
                 Console.SetWindowSize(120, 50);
                 Console.Write(Header);
@@ -51,7 +54,16 @@ namespace OETS.Server
                 {
                     GCSettings.LatencyMode = GCLatencyMode.Interactive;
                 }
-                
+
+                s_log.Info("Загрузка базы данных...");
+
+                if (!JournalManager.Instance.Load())
+                {
+                    Console.ReadKey(true);
+                    Environment.Exit(1);
+                }
+
+
                 Start();
             }
             catch (Exception exc)
@@ -70,6 +82,7 @@ namespace OETS.Server
 
         public static bool Start()
         {
+            s_log.Info("Загрузка данных из базы данных ЗАВЕРШЕНА.");
             server = SocketServer.Instance;
             server.Started += server_Started;
             server.LoginSuccess += server_LoginSuccess;

@@ -48,6 +48,8 @@
   <ItemGroup>
     <Compile Include="Events\ClientEventArgs.cs" />
     <Compile Include="Events\ClientEventHandler.cs" />
+    <Compile Include="Managers\Journal\JournalDictionary.cs" />
+    <Compile Include="Managers\Journal\JournalManagerC.cs" />
     <Compile Include="NLog\LogUtil.cs" />
     <Compile Include="NLog\StreamLogger.cs" />
     <Compile Include="Program.cs" />
