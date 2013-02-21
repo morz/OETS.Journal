@@ -532,7 +532,7 @@ namespace OETS.Shared
                     Receive();
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 this.Close();
                 if (Disconnected != null)

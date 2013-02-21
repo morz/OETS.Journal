@@ -1,17 +1,21 @@
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Collections;
 using OETS.Shared.Structures;
 
 namespace OETS.Server
 {
-    [Serializable]
-    public class JournalDictionary : DictionaryBase
+    public class DictionaryB : DictionaryBase
     {
-        public journal_contentData this[int key]
+        public void Dispose()
         {
-            get { return (journal_contentData)Dictionary[key]; }
+            Dictionary.Clear();
+        }
+
+        public string this[int key]
+        {
+            get { return (string)Dictionary[key]; }
             set { Dictionary[key] = value; }
         }
 
@@ -20,7 +24,7 @@ namespace OETS.Server
             get { return Dictionary.Values; }
         }
 
-        public void Add(int key, journal_contentData value)
+        public void Add(int key, string value)
         {
             Dictionary.Add(key, value);
         }

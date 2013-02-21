@@ -94,6 +94,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Managers\Journal\JournalDictionary.cs" />
+    <Compile Include="Managers\Journal\JournalManagerC.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>

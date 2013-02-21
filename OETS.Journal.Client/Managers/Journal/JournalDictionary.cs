@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using OETS.Shared.Structures;
 
-namespace OETS.Server
+namespace OETS.Journal.Client
 {
     [Serializable]
     public class JournalDictionary : DictionaryBase

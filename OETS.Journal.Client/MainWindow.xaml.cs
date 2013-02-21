@@ -2,22 +2,11 @@
 using OETS.Shared.Opcodes;
 using OETS.Shared.Structures;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
-using System.Net;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace OETS.Journal.Client
@@ -29,6 +18,7 @@ namespace OETS.Journal.Client
     {
         private Client client = Client.Instance;
         public string strHostName, iPAddress;
+        JournalManager jm = JournalManager.Instance;
 
         #region Instance
         private static MainWindow m_instance;
@@ -52,48 +42,12 @@ namespace OETS.Journal.Client
         }
         #endregion
 
-        private ObservableCollection<JournalContentData> _journalEntriesData;
-        public ObservableCollection<JournalContentData> JournalEntriesData
-        {
-            get
-            {
-                if (this._journalEntriesData == null)
-                    this._journalEntriesData = new ObservableCollection<JournalContentData>();
-
-                return this._journalEntriesData;
-            }
-            set
-            {
-                this._journalEntriesData = value;
-            }
-        }
-
         public MainWindow()
         {
             InitializeComponent();
             m_instance = this;
             DateText.SelectedDate = DateTime.Now;
-
-            var jd = new journal_contentData();
-            jd.CodeOborude = "003.993.330";
-            jd.Date = DateTime.Now.ToShortDateString();
-            jd.Description = "Ничего неделал, само работает";
-            jd.Enable = true;
-            jd.Family = "TEST";
-            jd.ID = "OSkjksjhaA";
-            jd.ModifyDate = "";
-            jd.NameOborude = "";
-            jd.Smena = "A";
-            jd.Status = "РНЗ";
-
-            for (int i = 0; i < 10; ++i)
-            {
-                jd.Date = DateTime.Now.AddDays(-i).ToShortDateString();
-                jd.CodeOborude = i.ToString();
-                JournalEntriesData.Add(new JournalContentData(jd));
-            }
-
-            
+            jm.Load();            
         }
 
         public void ShowError(string cat = null, string msg = null)
@@ -111,6 +65,7 @@ namespace OETS.Journal.Client
                 }));
             }
         }
+
         public void ConnectClient()
         {
             this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
@@ -211,6 +166,9 @@ namespace OETS.Journal.Client
 
             switch (SSocket.Command)
             {
+                case OpcoDes.SMSG_USER_AUTHENTICATED:
+                    HandleSMSG_USER_AUTHENTICATED(ea);
+                    break;
                 case OpcoDes.SMSG_PING:
                     HandleSMSG_PING(ea);
                     break;
@@ -220,10 +178,28 @@ namespace OETS.Journal.Client
                 case OpcoDes.SMSG_SERVER_STOPED:
                     HandleSMSG_SERVER_STOPED(ea);
                     break;
+                case OpcoDes.SMSG_JOURNAL_ADD:
+                    HandleSMSG_JOURNAL_ADD(ea);
+                    break;
+                case OpcoDes.SMSG_JOURNAL_MODIFY:
+                    HandleSMSG_JOURNAL_MODIFY(ea);
+                    break;
+                case OpcoDes.SMSG_JOURNAL_REMOVE:
+                    HandleSMSG_JOURNAL_REMOVE(ea);
+                    break;
             }
         }
         #endregion
-       
+
+        private void HandleSMSG_USER_AUTHENTICATED(SSEventArgs ea)
+        {
+            if (client.IsConnected)
+            {
+                jm.SendJournalList();
+            }
+
+        }
+
         private void HandleSMSG_SERVER_STOPED(SSEventArgs ea)
         {
             var sSocket = ea.SSocket;
@@ -253,6 +229,78 @@ namespace OETS.Journal.Client
             }
         }
 
+        #region HandleSMSG_JOURNAL_REMOVE
+        private void HandleSMSG_JOURNAL_REMOVE(SSEventArgs ea)
+        {
+            SSocket ss = ea.SSocket;
+            ResponsePacket pck = ss.Metadata as ResponsePacket;
+            if (pck != null)
+            {
+                Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, (DispatcherOperationCallback)delegate(object o)
+                {
+                    int id = Convert.ToInt32(pck.Response);
+                    if (jm.Journal.Contains(id))
+                        jm.Remove(id);
+                    jm.Save();
+                    DateText_SelectedDateChanged(null, null);
+
+                    return null;
+                }, null);
+            }
+        }
+        #endregion
+
+        #region HandleSMSG_JOURNAL_ADD
+        private void HandleSMSG_JOURNAL_ADD(SSEventArgs ea)
+        {
+            SSocket ss = ea.SSocket;
+            JournalPacket pck = ss.Metadata as JournalPacket;
+            if (pck != null)
+            {
+                Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, (DispatcherOperationCallback)delegate(object o)
+                {
+                    if (!jm.Journal.Contains(pck.Data.ID))
+                        jm.Add(pck.Data.ID, pck.Data);
+                    else
+                        jm.Set(pck.Data.ID, pck.Data);
+                    jm.Save();
+                    if (JournalAdd.Instance.IsVisible)
+                    {
+                        MessageBox.Show("Запись успешно добавлена!");
+                        JournalAdd.Instance.EntryID = pck.Data.ID;
+                    }
+                    DateText_SelectedDateChanged(null, null);
+                    return null;
+                }, null);
+            }
+        }
+        #endregion
+
+        #region HandleSMSG_JOURNAL_MODIFY
+        private void HandleSMSG_JOURNAL_MODIFY(SSEventArgs ea)
+        {
+            SSocket ss = ea.SSocket;
+            JournalPacket pck = ss.Metadata as JournalPacket;
+            if (pck != null)
+            {
+                Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, (DispatcherOperationCallback)delegate(object o)
+                {
+                    if (jm.Journal.Contains(pck.Data.ID))
+                        jm.Set(pck.Data.ID, pck.Data);
+                    else
+                        jm.Add(pck.Data.ID, pck.Data);
+
+                    jm.Save();
+
+                    DateText_SelectedDateChanged(null, null);
+
+                    return null;
+                }, null);
+            }
+        }
+        #endregion
+
+
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
             new JournalAdd().ShowDialog();
@@ -276,14 +324,14 @@ namespace OETS.Journal.Client
             DateText.SelectedDate = DateText.SelectedDate.Value.AddDays(-1);
         }
 
-        private void DateText_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        public void DateText_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
         {
-            JournalData.DataContext = JournalEntriesData.Where(x => x.Date == DateText.SelectedDate.Value.ToShortDateString());
+            JournalData.DataContext = jm.JournalData.Where(x => x.Date == DateText.SelectedDate.Value.ToShortDateString());
         }
 
         private void Window_Loaded_1(object sender, RoutedEventArgs e)
         {
-            JournalData.DataContext = JournalEntriesData.Where(x => x.Date == DateText.SelectedDate.Value.ToShortDateString());
+            JournalData.DataContext = jm.JournalData.Where(x => x.Date == DateText.SelectedDate.Value.ToShortDateString());
         }
 
 

@@ -16,7 +16,7 @@ namespace OETS.Shared
         }
 
         public JournalPacket(journal_contentData data)
-            : base("#" + data.ID)
+            : base(data.ID.ToString())
         {
             Data = data;
         }

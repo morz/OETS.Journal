@@ -3,6 +3,7 @@ using OETS.Shared.Structures;
 using OETS.Shared.Util;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
@@ -19,6 +20,8 @@ namespace OETS.Server
         private JournalDictionary journalEntries;
         private string dataFile;
         private static readonly Logger s_log = LogManager.GetCurrentClassLogger();
+        private static int m_highGuid;
+        public List<int> m_freeGuids = new List<int>();
         #endregion
 
         public ObservableCollection<JournalContentData> _journalData;
@@ -74,7 +77,7 @@ namespace OETS.Server
             set { dataFile = value; }
         }
 
-        public journal_contentData this[String Id]
+        public journal_contentData this[int Id]
         {
             get { return (journal_contentData)journalEntries[Id]; }
         }
@@ -88,6 +91,75 @@ namespace OETS.Server
             //Load();
         }
         #endregion
+
+
+        #region GenerateId()
+        public int GenerateId()
+        {
+            int guid;
+            if (m_freeGuids.Count > 0)
+            {
+                guid = m_freeGuids.GetRandom();
+                m_freeGuids.Remove(guid);
+            }
+            else
+                guid = ++m_highGuid;
+
+            s_log.Info("Сгенерирован новый ID для записей. ID:{0}", guid);
+            return guid;
+        }
+        #endregion
+
+        #region AddFreeGuid(int guid)
+        public void AddFreeGuid(int guid)
+        {
+            if (guid == m_highGuid)
+                m_highGuid--;
+            else
+                m_freeGuids.Add(guid);
+
+            s_log.Info("Добавлен свободный ID для записей. ID:{0}", guid);
+        }
+        #endregion
+
+        #region GenerateFreeGuids()
+        public bool GenerateFreeGuids()
+        {
+            try
+            {
+                int last_guid = 0;
+
+                if (JournalData.Count == 0)
+                    return true;
+
+                var en = JournalData.OrderBy(x => x.ID).GetEnumerator();
+                while(en.MoveNext())
+                {
+                    var entry = en.Current;
+                    int id = entry.ID;
+                    if (id > last_guid + 1)
+                    {
+                        int i = last_guid + 1;
+                        for (; i < id; ++i)
+                            m_freeGuids.Add(i);
+                    }
+                    last_guid = id;
+                }
+                if (m_freeGuids.Count > 0)
+                    s_log.Info("Обнаружены свободные ID для записей. Их количество: {0}", m_freeGuids.Count);
+                else
+                    s_log.Info("НЕ обнаружены свободные ID для записей.");
+
+                return true;
+            }
+            catch (Exception exc)
+            {
+                LogUtil.ErrorException(exc, false, "GenerateFreeGuids");
+                return false;
+            }
+        }
+        #endregion
+
 
         #region Load()
         public bool Load()
@@ -114,14 +186,18 @@ namespace OETS.Server
         {
             JournalData.Clear();
             s_log.Info("Обнаружено записей: {0}", journalEntries.Count);
+            if (!this.GenerateFreeGuids())
+                return false;
             IEnumerator clientEnumerator = journalEntries.GetEnumerator();
             while (clientEnumerator.MoveNext())
             {
                 DictionaryEntry datas = (DictionaryEntry)clientEnumerator.Current;
                 journal_contentData entry = (journal_contentData)datas.Value;
-                if (!String.IsNullOrEmpty(entry.ID))
+                if (entry.ID>0)
                 {
                     JournalContentData data = new JournalContentData(entry);
+                    if (entry.ID > m_highGuid)
+                        m_highGuid = entry.ID;
                     if (!JournalData.Contains(data))
                         JournalData.Add(data);
                 }
@@ -158,55 +234,107 @@ namespace OETS.Server
         #endregion
 
         #region add, contains, remove
-        public bool Add(String Id, journal_contentData Data)
+        public bool Add(journal_contentData Data)
         {
-            try
+            lock (this)
             {
-                if (Contains(Data.ID))
+                try
+                {
+                    if (Contains(Data.ID))
+                        return false;
+                    int new_Id = GenerateId();
+                    Data.ID = new_Id;
+                    journalEntries.Add(new_Id, Data);
+                    Save();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Trace.Write(ex.StackTrace);
+                    GenerateFreeGuids();
                     return false;
-
-                journalEntries.Add(Id, Data);
-                Save();
-                return true;
+                }
             }
-            catch (Exception ex)
+        }
+        public bool Add(ref journal_contentData Data)
+        {
+            lock (this)
             {
-                Trace.Write(ex.StackTrace);
-                return false;
+                try
+                {
+                    if (Contains(Data.ID))
+                        return false;
+                    int new_Id = GenerateId();
+                    Data.ID = new_Id;
+                    journalEntries.Add(new_Id, Data);
+                    Save();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Trace.Write(ex.StackTrace);
+                    GenerateFreeGuids();
+                    return false;
+                }
             }
         }
 
-        public bool Set(String Id, journal_contentData Data)
+        public bool Set(journal_contentData Data)
         {
-            try
+            lock (this)
             {
-                if (!Contains(Data.ID))
-                    return false;
+                try
+                {
+                    if (!Contains(Data.ID))
+                        return false;
 
-                journalEntries[Id] = Data;
-                Save();
-                return true;
-            }
-            catch (Exception exc)
-            {
-                LogUtil.ErrorException(exc, false, "Set");
-                s_log.ErrorException("Set", exc);
-                return false;
+                    journalEntries[Data.ID] = Data;
+                    Save();
+                    return true;
+                }
+                catch (Exception exc)
+                {
+                    LogUtil.ErrorException(exc, false, "Set");
+                    s_log.ErrorException("Set", exc);
+                    return false;
+                }
             }
         }
 
-        public bool Contains(String Id)
+        public bool Contains(int Id)
         {
             return journalEntries.Contains(Id);
         }
 
-        public void Remove(String Id)
+        #region FindByID(int id)
+        public journal_contentData FindByID(int id)
         {
-            if (journalEntries.Contains(Id))
+            try
             {
-                journalEntries.Remove(Id);
-                Save();
+                if (!Contains(id))
+                    return new journal_contentData();
+
+                return (journal_contentData)journalEntries[id];
             }
+            catch
+            {
+                return new journal_contentData();
+            }
+        }
+        #endregion
+
+        public bool Remove(int Id)
+        {
+            if (!Contains(Id))
+            {
+                s_log.Info("Запись с ID {0} не обнаружена!", Id);
+                    return false;
+            }
+            AddFreeGuid(Id);
+            s_log.Info("Новость с ID {0} Удалена!", Id);
+            journalEntries.Remove(Id);
+            Save();
+            return true;
         }
 
         public void Clear()
@@ -225,7 +353,7 @@ namespace OETS.Server
             while (jeEnumerator.MoveNext())
             {
                 JournalContentData entry = (JournalContentData)jeEnumerator.Current;
-                if (!String.IsNullOrEmpty(entry.ID))
+                if (entry.ID > 0)
                     str.Append(entry.ID + "-" + entry.ModifyDate + "-" + entry.Date + ";");
             }
             return str.ToString();

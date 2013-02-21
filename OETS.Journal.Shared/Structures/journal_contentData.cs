@@ -10,8 +10,7 @@ namespace OETS.Shared.Structures
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
     public struct journal_contentData
     {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 24)]
-        public string ID;
+        public int ID;
         
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 48)]
         public string CodeOborude;
@@ -59,7 +58,7 @@ namespace OETS.Shared.Structures
             this.ModifyDate = d.ModifyDate;
 
         }
-        public String ID { get; set; }
+        public int ID { get; set; }
         public string CodeOborude{ get; set; }
         public string NameOborude{ get; set; }
         public string Smena{ get; set; }
