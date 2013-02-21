@@ -6,6 +6,7 @@ using OETS.Shared.Util;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -44,6 +45,7 @@ namespace OETS.Server
         private Socket _tcpListen;
         private DateTime dtConnectedOn;
         private static Dictionary<OpcoDes, Action<ClientManager, TimedEventArgs>> m_CommandHandler = new Dictionary<OpcoDes, Action<ClientManager, TimedEventArgs>>();
+        private AutoResetEvent mutexSent;
 		#endregion
 
         #region Instance
@@ -146,6 +148,7 @@ namespace OETS.Server
 		#endregion private constructor
         
         #region CommandHandlers
+
         private void HandleCMSG_SEND_JOURNAL_ENTRY(ClientManager cm, TimedEventArgs ea)
         {
             SSocket chatSocket = cm.SSocket;
@@ -173,24 +176,11 @@ namespace OETS.Server
                     ClientManager c = (ClientManager)entry.Value;
 
                     SSocket ss = c.SSocket;
-                    try
-                    {
-                        ss.Command = (pck.Data.ID != -1 ? OpcoDes.SMSG_JOURNAL_MODIFY : OpcoDes.SMSG_JOURNAL_ADD);
-                        ss.Metatype = data.GetType().FullName;
-                        ss.Metadata = data;
-                        ss.Send();
-                    }
-                    catch (Exception exc)
-                    {
-                        LogUtil.ErrorException(exc, false, "HandleCMSG_SEND_JOURNAL_ENTRY");
-                    }
-                    finally
-                    {
-                    }
+                    SendCommand(c, (pck.Data.ID != -1 ? OpcoDes.SMSG_JOURNAL_MODIFY : OpcoDes.SMSG_JOURNAL_ADD), data.GetType().FullName, data);
                 }
             }
         }
-        #region HandleCMSG_GETTING_JOURNAL
+
         private void HandleCMSG_GETTING_JOURNAL(ClientManager cm, TimedEventArgs ea)
         {
             try
@@ -200,9 +190,10 @@ namespace OETS.Server
                     return;
 
                 ResponsePacket d = (ResponsePacket)sSocket.Metadata;
-                s_log.Debug("CMSG_GETTING_JOURNAL: {0} :: {1}:[{2}]", cm.ClientKey, ea.EventTime, d.Response.Length.ToString()/* + "::" + d.Response*/);
-
                 string news = new Smc(Smc.ServiceProviderEnum.TripleDES).Decrypt(d.Response);
+
+                s_log.Debug("CMSG_GETTING_JOURNAL: {0} :: {1}:[{2}]", cm.ClientKey, ea.EventTime, news.Split(';').Length.ToString()/* + "::" + d.Response*/);
+                
                 string[] IdJournal = news.Split(';');
                 for (int i = 0; i < IdJournal.Length; ++i)
                 {
@@ -211,7 +202,7 @@ namespace OETS.Server
                         int _id = Convert.ToInt32(IdJournal[i].Split('-')[0]);
                         if (JournalManager.Instance.Contains(_id))
                         {
-                            journal_contentData nct = JournalManager.Instance.JournalEntries[_id];
+                            journal_contentData nct = JournalManager.Instance.FindByID(_id);
 
                             if (nct.ID > 0)
                             {
@@ -222,10 +213,7 @@ namespace OETS.Server
                                     string.IsNullOrEmpty(pd) || pd != nct.Date)
                                 {
                                     JournalPacket pck = new JournalPacket(nct);
-                                    sSocket.Command = OpcoDes.SMSG_JOURNAL_MODIFY;
-                                    sSocket.Metatype = pck.GetType().FullName;
-                                    sSocket.Metadata = pck;
-                                    sSocket.Send();
+                                    SendCommand(cm, OpcoDes.SMSG_JOURNAL_MODIFY_SYNC, pck.GetType().FullName, pck);
                                     s_log.Trace("У клиента {0} :: Изменены записи: [{1}]", cm.ClientKey, _id);
                                 }
                             }
@@ -233,23 +221,19 @@ namespace OETS.Server
                         else
                         {
                             ResponsePacket pck = new ResponsePacket("SocketServer", cm.UserName, _id.ToString());
-                            sSocket.Command = OpcoDes.SMSG_JOURNAL_REMOVE;
-                            sSocket.Metatype = pck.GetType().FullName;
-                            sSocket.Metadata = pck;
-                            sSocket.Send();
+                            SendCommand(cm, OpcoDes.SMSG_JOURNAL_REMOVE_SYNC, pck.GetType().FullName, pck);
                             s_log.Trace("У клиента {0} :: Удалены записи: [{1}]", cm.ClientKey, _id);
                         }
                     }
                 }
+                SendResponse(cm, OpcoDes.SMSG_JOURNAL_SYNC_END, "OK");
             }
             catch (Exception exc)
             {
                 LogUtil.ErrorException(exc, false, "HandleCMSG_GETTING_JOURNAL");
             }
         }
-        #endregion
-
-        #region HandleCMSG_GETTING_JOURNAL_2
+        
         private void HandleCMSG_GETTING_JOURNAL_2(ClientManager cm, TimedEventArgs ea)
         {
             DictionaryB idList = new DictionaryB();
@@ -261,13 +245,14 @@ namespace OETS.Server
                     return;
 
                 ResponsePacket d = (ResponsePacket)sSocket.Metadata;
-                s_log.Debug("CMSG_GETTING_JOURNAL_2: {0} :: {1}:[{2}]", cm.ClientKey, ea.EventTime, d.Response.Length.ToString()/* + "::" + d.Response*/);
-
                 string news = new Smc(Smc.ServiceProviderEnum.TripleDES).Decrypt(d.Response);
+
+                s_log.Debug("CMSG_GETTING_JOURNAL_2: {0} :: {1}:[{2}]", cm.ClientKey, ea.EventTime, news.Split(';').Length.ToString()/* + "::" + d.Response*/);
+
                 string[] IdNews = news.Split(';');
                 for (int i = 0; i < IdNews.Length; ++i)
                 {
-                    if (!string.IsNullOrEmpty(IdNews[i]))
+                    if (IdNews[i] != "")
                     {
                         int _id = Convert.ToInt32(IdNews[i]);
                         idList[_id] = _id.ToString();
@@ -275,21 +260,18 @@ namespace OETS.Server
                 }
 
                 StringBuilder IDS = new StringBuilder();
-                IEnumerator clientEnumerator = JournalManager.Instance.JournalEntries.GetEnumerator();
-                while (clientEnumerator.MoveNext())
+                IEnumerator en = JournalManager.Instance.JournalData.OrderBy(x=>x.ID).GetEnumerator();
+                while (en.MoveNext())
                 {
-                    DictionaryEntry data = (DictionaryEntry)clientEnumerator.Current;
-                    journal_contentData entry = (journal_contentData)data.Value;
+                    var entry = en.Current as JournalContentData;
                     if (!idList.Contains(entry.ID))
                     {
                         IDS.Append(entry.ID + ";");
                         JournalPacket pck = new JournalPacket(entry);
-                        sSocket.Command = OpcoDes.SMSG_JOURNAL_ADD;
-                        sSocket.Metatype = pck.GetType().FullName;
-                        sSocket.Metadata = pck;
-                        sSocket.Send();
+                        SendCommand(cm, OpcoDes.SMSG_JOURNAL_ADD_SYNC, pck.GetType().FullName, pck); 
                     }
                 }
+                SendResponse(cm, OpcoDes.SMSG_JOURNAL_SYNC_END, "OK");
                 if (IDS.Length > 0)
                 {
                     s_log.Trace("У клиента {0} :: Добавлены записи: [{1}]", cm.ClientKey, IDS.ToString());
@@ -305,10 +287,7 @@ namespace OETS.Server
             {
             }
         }
-        #endregion
 
-
-        #region HandleCMSG_REQUEST_USER_LOGIN
         private void HandleCMSG_REQUEST_USER_LOGIN(ClientManager cm, TimedEventArgs ea)
         {
             SSocket chatSocket = cm.SSocket;
@@ -350,6 +329,8 @@ namespace OETS.Server
                 {
                     cm.Authenticated = true;
 
+                    s_log.Debug("Клиент " + cm.IPAddress + " был авторизирован");
+
                     if (LoginSuccess != null)
                         LoginSuccess(this, new ClientEventArgs(cm));
 
@@ -367,20 +348,6 @@ namespace OETS.Server
             }
         }
 
-        private void DisconnectAfterSend(object sender, EventArgs ea)
-        {
-            lock (lockObject)
-            {
-                while (cmToDisconnect.Count > 0)
-                {
-                    ClientManager cm = cmToDisconnect.Dequeue();
-                    DisconnectClientManager(cm);
-                }
-            }
-        }
-        #endregion 
-
-        #region HandleCMSG_PONG
         private void HandleCMSG_PONG(ClientManager cm, TimedEventArgs ea)
         {
             SSocket sSocket = cm.SSocket;
@@ -406,7 +373,6 @@ namespace OETS.Server
             {
             }
         }
-        #endregion
 
         #endregion
 
@@ -422,14 +388,11 @@ namespace OETS.Server
             if (!chatSocket.Connected)
                 return;
 
-            chatSocket.Command = OpcoDes.SMSG_ERROR;
-            chatSocket.Metatype = pck.GetType().FullName;
-            chatSocket.Metadata = pck;
-
-            chatSocket.Send();
+            SendCommand(cm, OpcoDes.SMSG_ERROR, pck.GetType().FullName, pck);
         }
         #endregion
 
+       
         #region SendResponse
         /// <summary>
         /// Using the ClientManager parameter send back a response to the client.
@@ -443,23 +406,38 @@ namespace OETS.Server
             pck.To = cm.UserName;
             pck.Response = response;
 
-            SendResponsePacketTo(cm, command, pck);
-        }
-
-        private void SendResponsePacketTo(ClientManager aClient, OpcoDes command, ResponsePacket pck)
-        {
-            SSocket sSocket = aClient.SSocket;
-
-            if (!sSocket.Connected)
-                return;
-
-            sSocket.Command = command;
-            sSocket.Metatype = pck.GetType().FullName;
-            sSocket.Metadata = pck;
-
-            sSocket.Send();
+            SendCommand(cm, command, pck.GetType().FullName, pck);
         }
         #endregion
+
+        public void SendCommand(ClientManager cm, OpcoDes command, string metatype, object metadata)
+        {
+            SSocket sSocket = cm.SSocket;
+
+            if (sSocket == null)
+                return;
+            sSocket.Sent += new EventHandler(SignalMutexSent);
+            mutexSent = new AutoResetEvent(false);
+            try
+            {
+                sSocket.Command = command;
+                sSocket.Metatype = metatype;
+                sSocket.Metadata = metadata;
+                sSocket.Send();
+                mutexSent.WaitOne();
+
+            }
+            catch (Exception exc)
+            {
+                Trace.Write(exc.Message);
+            }
+            finally
+            {
+                mutexSent.Close();
+            }
+            sSocket.Sent -= new EventHandler(SignalMutexSent);
+        }
+
 
         #endregion
 
@@ -765,6 +743,23 @@ namespace OETS.Server
             }
         }
         #endregion
+
+        private void DisconnectAfterSend(object sender, EventArgs ea)
+        {
+            lock (lockObject)
+            {
+                while (cmToDisconnect.Count > 0)
+                {
+                    ClientManager cm = cmToDisconnect.Dequeue();
+                    DisconnectClientManager(cm);
+                }
+            }
+        }
+
+        private void SignalMutexSent(object sender, EventArgs e)
+        {
+            mutexSent.Set();
+        }
     }	// Server
 
     public class IPUtil

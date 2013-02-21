@@ -68,5 +68,21 @@ namespace OETS.Shared.Structures
         public string Status { get; set; }
         public string ModifyDate{ get; set; }
         public bool Enable{ get; set; }
+
+        public journal_contentData ToStruct()
+        {
+            var jd = new journal_contentData();
+            jd.ID = this.ID;
+            jd.CodeOborude = this.CodeOborude;
+            jd.NameOborude = this.NameOborude;
+            jd.Smena = this.Smena;
+            jd.Family = this.Family;
+            jd.Date = this.Date;
+            jd.Description = this.Description;
+            jd.Status = this.Status;
+            jd.Enable = this.Enable;
+            jd.ModifyDate = this.ModifyDate;
+            return jd;
+        }
     }
 }

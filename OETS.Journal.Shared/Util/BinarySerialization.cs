@@ -40,9 +40,15 @@ namespace OETS.Shared.Util
         /// </summary>
 		public static object Deserialize(string filename)
 		{
+            string dir = Path.GetDirectoryName(filename);
+            DirectoryInfo dirInfo = new DirectoryInfo(dir);
+
+            if (dirInfo.Exists == false)
+                dirInfo.Create();
+
 			object tmp;
 
-			using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+			using (FileStream fs = new FileStream(filename, FileMode.OpenOrCreate, FileAccess.Read))
 			{
 				tmp = Deserialize(fs);
 				fs.Close();

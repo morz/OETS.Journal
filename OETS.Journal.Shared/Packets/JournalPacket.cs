@@ -20,5 +20,10 @@ namespace OETS.Shared
         {
             Data = data;
         }
+        public JournalPacket(JournalContentData data)
+            : base(data.ID.ToString())
+        {
+            Data = data.ToStruct();
+        }
     }
 }

@@ -2,7 +2,9 @@
 using OETS.Shared.Opcodes;
 using OETS.Shared.Structures;
 using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,7 +20,7 @@ namespace OETS.Journal.Client
     {
         private Client client = Client.Instance;
         public string strHostName, iPAddress;
-        JournalManager jm = JournalManager.Instance;
+        JournalManager jm;
 
         #region Instance
         private static MainWindow m_instance;
@@ -45,9 +47,32 @@ namespace OETS.Journal.Client
         public MainWindow()
         {
             InitializeComponent();
-            m_instance = this;
-            DateText.SelectedDate = DateTime.Now;
-            jm.Load();            
+
+            if (m_instance == null)
+                m_instance = this;
+            m_instance.Closing += m_instance_Closing;
+
+            jm = JournalManager.Instance;
+            jm.Load();
+
+            strHostName = Dns.GetHostName();
+            iPAddress = User32.GetLocalIpAddress();
+            if (iPAddress == "NotInLocal")
+                ShowError("Вычисления адреса", "Не возможно вычислисть ваш Адрес.\nЭто произошло по одной из причин:\n\t1) Вы не находитесь в одной подсети с новостным сервером.\n\t2) Произошол сбой.");
+            else
+                ConnectClient();
+        }
+
+        void m_instance_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            jm.Dispose();
+            if (client != null && client.IsConnected)
+            {
+                UnSubscribeClientFromEvents();
+                client.Disconnect();
+                client.Dispose();
+                client = null;
+            }
         }
 
         public void ShowError(string cat = null, string msg = null)
@@ -70,7 +95,9 @@ namespace OETS.Journal.Client
         {
             this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
             {
-                Choice.Instance.ProgressText.Content = "Подключаюсь к серверу.";
+                //Choice.Instance.ProgressText.Content = "Подключаюсь к серверу.";
+                Trace.WriteLine("[OETS.Client] Поключаюсь к серверу");
+
             }));
             SubscribeClientToEvents();
             client.Connect(strHostName, iPAddress);
@@ -103,13 +130,15 @@ namespace OETS.Journal.Client
 
                 if (client.IsConnected)
                 {
-                    if (Choice.Instance.IsVisible)
-                        Choice.Instance.ProgressText.Content = "Связь с сервером установлена.";
+                //    if (Choice.Instance.IsVisible)
+                //        Choice.Instance.ProgressText.Content = "Связь с сервером установлена.";
+                    Trace.WriteLine("[OETS.Client] Связь с сервером установлена.");
                 }
                 else
                 {
-                    if (Choice.Instance.IsVisible)
-                        Choice.Instance.ProgressText.Content = "Не возможно установить связь с сервером.";
+                    Trace.WriteLine("[OETS.Client] Не возможно установить связь с сервером.");
+                //    if (Choice.Instance.IsVisible)
+                //        Choice.Instance.ProgressText.Content = "Не возможно установить связь с сервером.";
                 }
             }));
         }
@@ -121,8 +150,9 @@ namespace OETS.Journal.Client
 
             this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
             {
-                if (Choice.Instance.IsVisible)
-                    Choice.Instance.ProgressText.Content = "Не возможно установить связь.";
+                //if (Choice.Instance.IsVisible)
+                //    Choice.Instance.ProgressText.Content = "Не возможно установить связь.";
+                Trace.WriteLine("[OETS.Client] Не возможно установить связь.");
             }));
             UnSubscribeClientFromEvents();
             if (client.IsConnected)
@@ -139,8 +169,9 @@ namespace OETS.Journal.Client
         {
             this.Dispatcher.Invoke(DispatcherPriority.Background, (Action)(() =>
             {
-                if (Choice.Instance.IsVisible)
-                    Choice.Instance.ProgressText.Content = "Соединение разорвано.";
+            //    if (Choice.Instance.IsVisible)
+            //        Choice.Instance.ProgressText.Content = "Соединение разорвано.";
+                Trace.WriteLine("[OETS.Client] Соединение разорвано.");
             }));
 
             UnSubscribeClientFromEvents();
@@ -156,6 +187,7 @@ namespace OETS.Journal.Client
         #region OnServerDisconnected
         void OnServerDisconnected(object sender, TimedEventArgs ea)
         {
+            Trace.WriteLine("[OETS.Client] Соединение принудительно разорвано.");
         }
         #endregion
 
@@ -179,17 +211,25 @@ namespace OETS.Journal.Client
                     HandleSMSG_SERVER_STOPED(ea);
                     break;
                 case OpcoDes.SMSG_JOURNAL_ADD:
+                case OpcoDes.SMSG_JOURNAL_ADD_SYNC:
                     HandleSMSG_JOURNAL_ADD(ea);
                     break;
                 case OpcoDes.SMSG_JOURNAL_MODIFY:
+                case OpcoDes.SMSG_JOURNAL_MODIFY_SYNC:
                     HandleSMSG_JOURNAL_MODIFY(ea);
                     break;
                 case OpcoDes.SMSG_JOURNAL_REMOVE:
+                case OpcoDes.SMSG_JOURNAL_REMOVE_SYNC:
                     HandleSMSG_JOURNAL_REMOVE(ea);
+                    break;
+                case OpcoDes.SMSG_JOURNAL_SYNC_END:
+                    HandleSMSG_JOURNAL_SYNC_END(ea);
                     break;
             }
         }
         #endregion
+
+        #region CommandHandlers
 
         private void HandleSMSG_USER_AUTHENTICATED(SSEventArgs ea)
         {
@@ -197,7 +237,6 @@ namespace OETS.Journal.Client
             {
                 jm.SendJournalList();
             }
-
         }
 
         private void HandleSMSG_SERVER_STOPED(SSEventArgs ea)
@@ -229,7 +268,6 @@ namespace OETS.Journal.Client
             }
         }
 
-        #region HandleSMSG_JOURNAL_REMOVE
         private void HandleSMSG_JOURNAL_REMOVE(SSEventArgs ea)
         {
             SSocket ss = ea.SSocket;
@@ -239,8 +277,11 @@ namespace OETS.Journal.Client
                 Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, (DispatcherOperationCallback)delegate(object o)
                 {
                     int id = Convert.ToInt32(pck.Response);
-                    if (jm.Journal.Contains(id))
-                        jm.Remove(id);
+                    jm.Remove(id);
+
+                    if (ss.Command != OpcoDes.SMSG_JOURNAL_REMOVE)
+                        return null;
+
                     jm.Save();
                     DateText_SelectedDateChanged(null, null);
 
@@ -248,22 +289,24 @@ namespace OETS.Journal.Client
                 }, null);
             }
         }
-        #endregion
-
-        #region HandleSMSG_JOURNAL_ADD
+        
         private void HandleSMSG_JOURNAL_ADD(SSEventArgs ea)
         {
             SSocket ss = ea.SSocket;
+            
             JournalPacket pck = ss.Metadata as JournalPacket;
+            
             if (pck != null)
             {
-                Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, (DispatcherOperationCallback)delegate(object o)
+                this.Dispatcher.BeginInvoke(DispatcherPriority.Background, (DispatcherOperationCallback)delegate(object o)
                 {
-                    if (!jm.Journal.Contains(pck.Data.ID))
-                        jm.Add(pck.Data.ID, pck.Data);
-                    else
-                        jm.Set(pck.Data.ID, pck.Data);
+                    var t = jm.Add(pck.Data.ID, pck.Data);
+
+                    if (ss.Command != OpcoDes.SMSG_JOURNAL_ADD)
+                        return null;
+
                     jm.Save();
+
                     if (JournalAdd.Instance.IsVisible)
                     {
                         MessageBox.Show("Запись успешно добавлена!");
@@ -274,9 +317,7 @@ namespace OETS.Journal.Client
                 }, null);
             }
         }
-        #endregion
 
-        #region HandleSMSG_JOURNAL_MODIFY
         private void HandleSMSG_JOURNAL_MODIFY(SSEventArgs ea)
         {
             SSocket ss = ea.SSocket;
@@ -290,6 +331,9 @@ namespace OETS.Journal.Client
                     else
                         jm.Add(pck.Data.ID, pck.Data);
 
+                    if (ss.Command != OpcoDes.SMSG_JOURNAL_MODIFY)
+                        return null;
+
                     jm.Save();
 
                     DateText_SelectedDateChanged(null, null);
@@ -298,8 +342,26 @@ namespace OETS.Journal.Client
                 }, null);
             }
         }
-        #endregion
 
+        private void HandleSMSG_JOURNAL_SYNC_END(SSEventArgs ea)
+        {
+            SSocket ss = ea.SSocket;
+            ResponsePacket pck = ss.Metadata as ResponsePacket;
+            if (pck.Response == "OK")
+            {
+                this.Dispatcher.BeginInvoke(DispatcherPriority.Background, (DispatcherOperationCallback)delegate(object o)
+                {
+                    jm.Save();
+
+                    DateText_SelectedDateChanged(null, null);
+                    MessageBox.Show("SYNC COMPLETE!");
+
+                    return null;
+                }, null);
+            }
+        }
+
+        #endregion
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
@@ -331,6 +393,7 @@ namespace OETS.Journal.Client
 
         private void Window_Loaded_1(object sender, RoutedEventArgs e)
         {
+            DateText.SelectedDate = DateTime.Now;
             JournalData.DataContext = jm.JournalData.Where(x => x.Date == DateText.SelectedDate.Value.ToShortDateString());
         }
 

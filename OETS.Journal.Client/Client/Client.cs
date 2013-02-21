@@ -166,7 +166,6 @@ namespace OETS.Journal.Client
             { serverEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), serverPort); }
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-
             SocketAsyncEventArgs acceptEventArg = null;
             if (acceptEventArg == null)
             {
@@ -293,6 +292,8 @@ namespace OETS.Journal.Client
             cs.Dispose();
             cs = null;
 
+            Trace.WriteLine("[OETS.Client] OnChatSocketDisconnected");
+
             if (Disconnected != null)
                 Disconnected(this, new TimedEventArgs());
         }
@@ -351,6 +352,8 @@ namespace OETS.Journal.Client
                 sSocket.Dispose();
                 sSocket = null;
             }
+
+            Trace.WriteLine("[OETS.Client] Disconnect");
 
             if (Disconnected != null)
                 Disconnected(this, new TimedEventArgs());

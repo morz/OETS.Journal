@@ -109,6 +109,7 @@ namespace OETS.Journal.Client
                 {
                     _entries = new JournalDictionary();
                     BinarySerialization.Serialize(dataFile, _entries);
+                    LoadOb(); 
                     Trace.Write(ex.StackTrace);
                 }
             }
@@ -117,25 +118,29 @@ namespace OETS.Journal.Client
 
         private void LoadOb()
         {
-            JournalData.Clear();
-            IEnumerator clientEnumerator = _entries.GetEnumerator();
-            while (clientEnumerator.MoveNext())
+            lock (this)
             {
-                DictionaryEntry datas = (DictionaryEntry)clientEnumerator.Current;
-                journal_contentData entry = (journal_contentData)datas.Value;
-                if (entry.ID > 0)
+                JournalData.Clear();
+                IEnumerator clientEnumerator = _entries.GetEnumerator();
+                while (clientEnumerator.MoveNext())
                 {
-                    JournalContentData data = new JournalContentData(entry);
-                    if (!JournalData.Contains(data))
-                        JournalData.Add(data);
+                    DictionaryEntry datas = (DictionaryEntry)clientEnumerator.Current;
+                    journal_contentData entry = (journal_contentData)datas.Value;
+                    if (entry.ID > 0)
+                    {
+                        JournalContentData data = new JournalContentData(entry);
+                        if (!JournalData.Contains(data))
+                            JournalData.Add(data);
+                    }
                 }
-            }
 
-            var l1 =
-                from p in JournalData where p.Enable == true 
-                orderby p.Date descending 
-                select p;
-            JournalData = new ObservableCollection<JournalContentData>(l1);
+                var l1 =
+                    from p in JournalData
+                    where p.Enable == true
+                    orderby p.Date descending
+                    select p;
+                JournalData = new ObservableCollection<JournalContentData>(l1);
+            }
         }
         #region Save()
         public void Save()
@@ -167,7 +172,7 @@ namespace OETS.Journal.Client
                     return false;
 
                 _entries.Add(Id, Data);
-                Save();
+                //Save();
                 return true;
             }
             catch (Exception ex)
@@ -179,11 +184,14 @@ namespace OETS.Journal.Client
 
         public void Set(int Id, journal_contentData Data)
         {
-            if (!Contains(Id))
-                return;
+            lock (this)
+            {
+                if (!Contains(Id))
+                    return;
 
-            _entries[Id] = Data;
-            Save();
+                _entries[Id] = Data;
+                //Save();
+            }
         }
 
         public bool Contains(int Id)
@@ -193,10 +201,13 @@ namespace OETS.Journal.Client
 
         public void Remove(int Id)
         {
-            if (_entries.Contains(Id))
+            lock (this)
             {
-                _entries.Remove(Id);
-                Save();
+                if (_entries.Contains(Id))
+                {
+                    _entries.Remove(Id);
+                    //Save();
+                }
             }
         }
 
@@ -230,15 +241,16 @@ namespace OETS.Journal.Client
                 try
                 {
 
-                    IEnumerator clientEnumerator = _entries.GetEnumerator();
+                    var l1 = JournalData.OrderBy(st => st.ID).ToList();
+                    ObservableCollection<JournalContentData> d = new ObservableCollection<JournalContentData>(l1);
+                    IEnumerator clientEnumerator = d.GetEnumerator();
                     StringBuilder str = new StringBuilder();
                     StringBuilder ids_str = new StringBuilder();
                     int count = 0;
                     while (clientEnumerator.MoveNext())
                     {
-                        DictionaryEntry data = (DictionaryEntry)clientEnumerator.Current;
-                        journal_contentData entry = (journal_contentData)data.Value;
-                        if (entry.ID >0)
+                        JournalContentData entry = (JournalContentData)clientEnumerator.Current;
+                        if (entry.ID > 0)
                         {
                             ids_str.Append(entry.ID + ";");
                             str.Append(entry.ID + "-" + entry.ModifyDate + "-" + entry.Date + ";");
@@ -269,8 +281,9 @@ namespace OETS.Journal.Client
                     }
                     return true;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    Trace.WriteLine(ex.Message);
                     return false;
                 }
             }
