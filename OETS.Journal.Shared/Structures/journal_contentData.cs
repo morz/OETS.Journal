@@ -7,10 +7,10 @@ using System.ComponentModel;
 namespace OETS.Shared.Structures
 {
     [Serializable]
-    [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
+    [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Auto)]
     public struct journal_contentData
     {
-        public int ID;
+        public Int32 ID;
         
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 48)]
         public string CodeOborude;
@@ -18,22 +18,22 @@ namespace OETS.Shared.Structures
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 48)]
         public string NameOborude;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 2)]
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 48)]
         public string Smena;
 
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 48)]
         public string Family;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 24)]
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 48)]
         public string Date;
 
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 2048)]
         public string Description;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 24)]
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 48)]
         public string Status;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 25)]
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 48)]
         public string ModifyDate;
 
         public bool Enable;

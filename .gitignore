@@ -76,6 +76,7 @@ ipch/
 # Visual Studio profiler
 *.psess
 *.vsp
+*.vss*
 
 # ReSharper is a .NET coding add-in
 _ReSharper*
@@ -106,6 +107,7 @@ ClientBin
 stylecop.*
 ~$*
 *.dbmdl
+$*
 Generated_Code #added for RIA/Silverlight projects
 
 # Backup & report files from converting an old project file to a newer

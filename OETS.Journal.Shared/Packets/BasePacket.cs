@@ -130,7 +130,7 @@ namespace OETS.Shared
                         Buffer.BlockCopy(Encoding.Unicode.GetBytes(strField), 0, data, ptr, size);
                         ptr += size;
                     }
-                    if (fi.FieldType.IsStructureType())
+                    else if (fi.FieldType.IsStructureType())
                     {
                         object strField = fi.GetValue(this);
                         int rawsize = Marshal.SizeOf(strField);
@@ -143,6 +143,11 @@ namespace OETS.Shared
 
                         Buffer.BlockCopy(l, 0, data, ptr, rawsize);
                         ptr += rawsize;
+                    }
+                    else
+                    {
+
+                        ptr += 4;
                     }
                 }
             }

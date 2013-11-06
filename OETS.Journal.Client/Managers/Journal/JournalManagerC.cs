@@ -218,7 +218,7 @@ namespace OETS.Journal.Client
         }
         #endregion
 
-        public String GetJournalIds()
+        public bool SendJournalIds()
         {
             var l1 = JournalData.OrderBy(st => st.ID).ToList();
             ObservableCollection<JournalContentData> d = new ObservableCollection<JournalContentData>(l1);
@@ -229,11 +229,19 @@ namespace OETS.Journal.Client
                 //DictionaryEntry data = (DictionaryEntry)clientEnumerator.Current;
                 JournalContentData entry = (JournalContentData)clientEnumerator.Current;
                 if (entry.ID > 0)
-                    str.Append(entry.ID + "-" + entry.ModifyDate + "-" + entry.Date + ";");
+                    str.Append(entry.ID + ";");
             }
-            return str.ToString();
+            if (str.Length >= 0)
+            {
+                ResponsePacket pck = new ResponsePacket(Client.Instance.User, "SSocketServer",
+                            new Smc(Smc.ServiceProviderEnum.TripleDES).Encrypt(str.ToString()));
+                Client.Instance.SendCommand(Client.Instance.ServerIp, OpcoDes.CMSG_GETTING_JOURNAL_2,
+                    pck.GetType().FullName, pck);
+            }
+            Trace.Write("[OETS.Client] [SendJournalIds] All sended!");
+            return true;
         }
-
+        
         public bool SendJournalList()
         {
             lock (this)
@@ -245,14 +253,12 @@ namespace OETS.Journal.Client
                     ObservableCollection<JournalContentData> d = new ObservableCollection<JournalContentData>(l1);
                     IEnumerator clientEnumerator = d.GetEnumerator();
                     StringBuilder str = new StringBuilder();
-                    StringBuilder ids_str = new StringBuilder();
                     int count = 0;
                     while (clientEnumerator.MoveNext())
                     {
                         JournalContentData entry = (JournalContentData)clientEnumerator.Current;
                         if (entry.ID > 0)
                         {
-                            ids_str.Append(entry.ID + ";");
                             str.Append(entry.ID + "-" + entry.ModifyDate + "-" + entry.Date + ";");
                             count++;
                             if (count == 10)
@@ -265,7 +271,7 @@ namespace OETS.Journal.Client
                             }
                         }
                     }
-                    if (str.Length > 0)
+                    if (str.Length >= 0)
                     {
                         ResponsePacket pck = new ResponsePacket(Client.Instance.User, "SSocketServer",
                                     new Smc(Smc.ServiceProviderEnum.TripleDES).Encrypt(str.ToString()));
@@ -273,12 +279,7 @@ namespace OETS.Journal.Client
                         count = 0;
                         str.Remove(0, str.Length);
                     }
-                    if (ids_str.Length >= 0)
-                    {
-                        ResponsePacket pck = new ResponsePacket(Client.Instance.User, "SSocketServer",
-                                    new Smc(Smc.ServiceProviderEnum.TripleDES).Encrypt(ids_str.ToString()));
-                        Client.Instance.SendCommand(Client.Instance.ServerIp, OpcoDes.CMSG_GETTING_JOURNAL_2, pck.GetType().FullName, pck);
-                    }
+                    Trace.Write("[OETS.Client] [SendJournalList] All sended!");
                     return true;
                 }
                 catch (Exception ex)

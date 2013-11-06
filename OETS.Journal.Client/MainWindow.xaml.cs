@@ -195,6 +195,7 @@ namespace OETS.Journal.Client
         void OnCommandReceived(object sender, SSEventArgs ea)
         {
             SSocket SSocket = ea.SSocket;
+            Trace.WriteLine("[OETS.Client] [Received] <-- " + SSocket.Command);
 
             switch (SSocket.Command)
             {
@@ -233,10 +234,8 @@ namespace OETS.Journal.Client
 
         private void HandleSMSG_USER_AUTHENTICATED(SSEventArgs ea)
         {
-            if (client.IsConnected)
-            {
-                jm.SendJournalList();
-            }
+            Trace.Write("[OETS.Client] [SMSG_USER_AUTHENTICATED] " + ((ResponsePacket)ea.SSocket.Metadata).Response);
+            jm.SendJournalList();
         }
 
         private void HandleSMSG_SERVER_STOPED(SSEventArgs ea)
@@ -347,14 +346,29 @@ namespace OETS.Journal.Client
         {
             SSocket ss = ea.SSocket;
             ResponsePacket pck = ss.Metadata as ResponsePacket;
-            if (pck.Response == "OK")
+            Trace.Write("SMSG_JOURNAL_SYNC_END " + pck.Response);
+            if (pck.Response == "SYNC_1")
+            {
+                
+                this.Dispatcher.BeginInvoke(DispatcherPriority.Background, (DispatcherOperationCallback)delegate(object o)
+                {
+                    jm.SendJournalIds();
+                    jm.Save();
+
+                    DateText_SelectedDateChanged(null, null);
+                    Trace.Write("SendJournalList COMPLETE!");
+
+                    return null;
+                }, null);
+            }
+            else if (pck.Response == "SYNC_2")
             {
                 this.Dispatcher.BeginInvoke(DispatcherPriority.Background, (DispatcherOperationCallback)delegate(object o)
                 {
                     jm.Save();
 
                     DateText_SelectedDateChanged(null, null);
-                    MessageBox.Show("SYNC COMPLETE!");
+                    Trace.Write("SendJournalIds COMPLETE!");
 
                     return null;
                 }, null);

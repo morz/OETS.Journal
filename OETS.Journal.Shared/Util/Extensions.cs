@@ -289,7 +289,7 @@ namespace OETS.Shared.Util
 
         public static bool IsStructureType(this Type type)
         {
-            return type.FullName.StartsWith("OETS.Shared.Structures");
+            return type.FullName.StartsWith("OETS.Shared");
         }
 		#endregion
 	}

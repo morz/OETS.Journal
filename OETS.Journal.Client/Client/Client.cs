@@ -170,7 +170,7 @@ namespace OETS.Journal.Client
             if (acceptEventArg == null)
             {
                 acceptEventArg = new SocketAsyncEventArgs();
-                acceptEventArg.Completed += AcceptEventCompleted;
+                acceptEventArg.Completed += delegate(object sender, SocketAsyncEventArgs e) { ProcessConnect(e); };
                 acceptEventArg.RemoteEndPoint = serverEndPoint;
                 acceptEventArg.AcceptSocket = socket;
             }
@@ -181,12 +181,6 @@ namespace OETS.Journal.Client
             }
             //socket.BeginConnect(serverEndPoint, new AsyncCallback(OnConnect), socket);
         }
-
-        private void AcceptEventCompleted(object sender, SocketAsyncEventArgs e)
-        {
-            ProcessConnect(e);
-        }
-
         private void ProcessConnect(SocketAsyncEventArgs args)
         {
             try
@@ -309,17 +303,10 @@ namespace OETS.Journal.Client
 
             if (CommandReceived != null)
             {
-                // Because a constant flow of packets can be received
-                // we need to pass to the event a deep copy of the ChatSocket
-                // or else the ChatSocket object members may be modified before 
-                // the eventhandler processes them.                        
-                // TODO: ChatSocket needs to use monitors
                 SSocket chatSocketCopy = new SSocket(cs);
                 CommandReceived(this, new SSEventArgs(chatSocketCopy));
             }
 
-            // certain commands from the server require automatic response from the Client
-            // ex: after user authenticated => request user list
             switch (cs.Command)
             {
                 case OpcoDes.SMSG_SERVER_DISCONNECTED:
@@ -360,7 +347,7 @@ namespace OETS.Journal.Client
         }
         #endregion
 
-        private AutoResetEvent mutexSent;
+        private AutoResetEvent mutexSent = new AutoResetEvent(false);
 
         #region SendCommand
         public void SendCommand(IPAddress target, OpcoDes command, string metatype, object metadata)
@@ -368,16 +355,16 @@ namespace OETS.Journal.Client
             if (sSocket == null)
                 return;
             sSocket.Sent += new EventHandler(SignalMutexSent);
-            mutexSent = new AutoResetEvent(false);
+            //mutexSent = new AutoResetEvent(false);
             try
             {
                 sSocket.Target = target;
                 sSocket.Command = command;
                 sSocket.Metatype = metatype;
                 sSocket.Metadata = metadata;
-                sSocket.Send();
+                sSocket.Send();                
+                Trace.WriteLine("[OETS.Client] [SendCommand] --> " + command);
                 mutexSent.WaitOne();
-
             }
             catch (Exception exc)
             {
@@ -385,7 +372,7 @@ namespace OETS.Journal.Client
             }
             finally
             {
-                mutexSent.Close();
+                mutexSent.Set();
             }
             sSocket.Sent -= new EventHandler(SignalMutexSent);
         }

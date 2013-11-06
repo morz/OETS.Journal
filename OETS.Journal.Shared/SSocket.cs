@@ -163,50 +163,47 @@ namespace OETS.Shared
                 return;
             try
             {
-                int full_packet_size = 4;
-                byte[] commandBuffer = new byte[4];
-                commandBuffer = BitConverter.GetBytes((int)command);
+                var commandData = BitConverter.GetBytes((int)command);
 
+                /*
                 byte[] ipLen = new byte[4];
                 byte[] ipBuffer = Encoding.Unicode.GetBytes(target.ToString());
                 ipLen = BitConverter.GetBytes((int)ipBuffer.Length);
                 full_packet_size += ipLen.Length + ipBuffer.Length;
+                */
+                var typeData = Encoding.Unicode.GetBytes(metatype);
+                var typeLen = BitConverter.GetBytes(typeData.Length);
 
-                byte[] type = new byte[4];
-                byte[] typeBuffer = Encoding.Unicode.GetBytes(metatype.ToString());
-                type = BitConverter.GetBytes((int)typeBuffer.Length);
-                full_packet_size += type.Length + typeBuffer.Length;
-
-                byte[] meta = new byte[4];
-                byte[] metaBuffer = null;
                 Type metaType = metadata.GetType();
                 MethodInfo mi = metaType.GetMethod("GetBytes");
-                metaBuffer = (byte[])mi.Invoke(metadata, null);
-                meta = BitConverter.GetBytes((int)metaBuffer.Length);
-                full_packet_size += meta.Length + metaBuffer.Length;
+                var metaData = (byte[])mi.Invoke(metadata, null);
+                var metaLen = BitConverter.GetBytes(metaData.Length);
 
-                byte[] buffer = new byte[BufferSize];
-                full_packet_size = 0;
+                byte[] buffer = new byte[commandData.Length +
+                    typeLen.Length + typeData.Length + metaLen.Length + metaData.Length+1];
 
-                System.Buffer.BlockCopy(commandBuffer, 0, buffer, 0, commandBuffer.Length);
-                int offset = commandBuffer.Length;
+                System.Buffer.BlockCopy(commandData, 0, buffer, 0, commandData.Length);
+                int offset = commandData.Length;
+                /*
                 System.Buffer.BlockCopy(ipLen, 0, buffer, offset, ipLen.Length);
                 offset += ipLen.Length;
                 System.Buffer.BlockCopy(ipBuffer, 0, buffer, offset, ipBuffer.Length);
                 offset += ipBuffer.Length;
-                System.Buffer.BlockCopy(type, 0, buffer, offset, type.Length);
-                offset += type.Length;
-                System.Buffer.BlockCopy(typeBuffer, 0, buffer, offset, typeBuffer.Length);
-                offset += typeBuffer.Length;
-                System.Buffer.BlockCopy(meta, 0, buffer, offset, meta.Length);
-                offset += meta.Length;
-                System.Buffer.BlockCopy(metaBuffer, 0, buffer, offset, metaBuffer.Length);
+                */
+                System.Buffer.BlockCopy(typeLen, 0, buffer, offset, typeLen.Length);
+                offset += typeLen.Length;
+                System.Buffer.BlockCopy(typeData, 0, buffer, offset, typeData.Length);
+                offset += typeData.Length;
+
+                System.Buffer.BlockCopy(metaLen, 0, buffer, offset, metaLen.Length);
+                offset += metaLen.Length;
+                System.Buffer.BlockCopy(metaData, 0, buffer, offset, metaData.Length);
 
                 var args = SocketHelpers.AcquireSocketArg();
                 if (args != null)
                 {
-                    Trace.Write(string.Format("SSocket SEND {0} -> {1} {2}",
-                    socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString(), command.ToString()));
+                    //Trace.Write(string.Format("SSocket SEND {0} -> {1} {2}",
+                    //socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString(), command.ToString()));
 
                     args.Completed += SendAsyncComplete;
                     args.SetBuffer(buffer, 0, buffer.Length);
@@ -246,7 +243,7 @@ namespace OETS.Shared
         /// <summary>
         /// Size For packets
         /// </summary>
-        public const int BufferSize = 5120;
+        public const int BufferSize = 3072;
 
         private byte[] _bufferSegment = null;
 
@@ -256,11 +253,11 @@ namespace OETS.Shared
                 return;
             try
             {
-                if (_bufferSegment == null)
+                //if (_bufferSegment == null)
                     _bufferSegment = new byte[BufferSize];
 
                 var socketArgs = SocketHelpers.AcquireSocketArg();
-
+                var i = socketArgs.Count;
                 socketArgs.SetBuffer(_bufferSegment, 0, _bufferSegment.Length);
                 socketArgs.UserToken = this;                
                 socketArgs.Completed += ReceiveAsyncComplete;
@@ -308,7 +305,7 @@ namespace OETS.Shared
                     //command
                     int bufferVal = BitConverter.ToInt32(_bufferSegment, 0);
 
-                    // IP
+                    /*/ IP
                     byte[] b1 = new byte[4];
                     System.Buffer.BlockCopy(_bufferSegment, offset, b1, 0, 4);
                     offset += b1.Length;
@@ -316,12 +313,12 @@ namespace OETS.Shared
                     byte[] ipBuffer = new byte[size];
                     System.Buffer.BlockCopy(_bufferSegment, offset, ipBuffer, 0, size);
                     offset += size;
-
+                    */
                     // metaType
                     byte[] b2 = new byte[4];
                     System.Buffer.BlockCopy(_bufferSegment, offset, b2, 0, 4);
                     offset += b2.Length;
-                    size = BitConverter.ToInt32(b2, 0);
+                    int size = BitConverter.ToInt32(b2, 0);
                     byte[] typeBuffer = new byte[size];
                     System.Buffer.BlockCopy(_bufferSegment, offset, typeBuffer, 0, size);
                     offset += size;
@@ -342,13 +339,19 @@ namespace OETS.Shared
                     {
                         command = (OpcoDes)bufferVal;
 
-                        if (!IPAddress.TryParse(Encoding.Unicode.GetString(ipBuffer), out target))
-                            target = IPAddress.Parse("127.0.0.1");
+                       // if (!IPAddress.TryParse(Encoding.Unicode.GetString(ipBuffer), out target))
+                       //     target = IPAddress.Parse("127.0.0.1");
 
-                        Trace.Write(string.Format("SSocket RECIEVE {0} <- {1} {2}",
-                    socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString(), command.ToString()));
+                       // Trace.Write(string.Format("SSocket RECIEVE {0} <- {1} {2}",
+                    //socket.LocalEndPoint.ToString(), socket.RemoteEndPoint.ToString(), command.ToString()));
 
                         metatype = Encoding.Unicode.GetString(typeBuffer);
+
+                        if (String.IsNullOrEmpty(metatype))
+                        {
+                            Trace.Write("Ошибка!!!!!! Тип не найден! [" + metatype + "]. Команда - " + command + ". " +
+                                " Размер metaBuffer:" + metaBuffer.Length + ", typeBuffer:" + typeBuffer.Length + ",bufferVal:" + bufferVal);
+                        }
 
                         Type typeToCreate = Type.GetType(metatype);
                         IBasePacket packet = (IBasePacket)Activator.CreateInstance(typeToCreate);

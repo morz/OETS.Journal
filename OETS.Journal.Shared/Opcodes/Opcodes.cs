@@ -8,7 +8,7 @@ namespace OETS.Shared.Opcodes
     /// </summary>
     public enum OpcoDes : int
     {
-        CMSG_REQUEST_USER_LOGIN,
+        CMSG_REQUEST_USER_LOGIN = 1,
 
         CMSG_GETTING_JOURNAL,
 

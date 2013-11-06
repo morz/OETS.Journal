@@ -8,6 +8,21 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OETS.Journal.Shared", "OETS.Journal.Shared\OETS.Journal.Shared.csproj", "{75725F29-4A9C-461A-BE4D-18E99F482839}"
 EndProject
 Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 4
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://morz.visualstudio.com/defaultcollection
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = OETS.Journal.Client\\OETS.Journal.Client.csproj
+		SccProjectName1 = OETS.Journal.Client
+		SccLocalPath1 = OETS.Journal.Client
+		SccProjectUniqueName2 = OETS.Journal.Server\\OETS.Journal.Server.csproj
+		SccProjectName2 = OETS.Journal.Server
+		SccLocalPath2 = OETS.Journal.Server
+		SccProjectUniqueName3 = OETS.Journal.Shared\\OETS.Journal.Shared.csproj
+		SccProjectName3 = OETS.Journal.Shared
+		SccLocalPath3 = OETS.Journal.Shared
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
